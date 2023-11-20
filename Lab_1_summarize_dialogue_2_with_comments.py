@@ -4,7 +4,7 @@
 # Do not worry if you do not understand yet all of those components - they will be described 
 # and discussed later in the notebook.
 
-#%%
+
 from datasets import load_dataset
 from transformers import AutoModelForSeq2SeqLM
 from transformers import AutoTokenizer
@@ -19,7 +19,7 @@ from transformers import GenerationConfig
 # Hugging Face dataset. This dataset contains 10,000+ dialogues with the corresponding manually 
 # labeled summaries and topics. 
 
-#%%
+
 huggingface_dataset_name = "knkarthick/dialogsum"
 dataset = load_dataset(huggingface_dataset_name)
 
@@ -43,7 +43,7 @@ for i, index in enumerate(example_indices):
 # Load the [FLAN-T5 model](https://huggingface.co/docs/transformers/model_doc/flan-t5), creating 
 # an instance of the `AutoModelForSeq2SeqLM` class with the `.from_pretrained()` method. 
 
-#%%
+
 model_name='google/flan-t5-base'
 
 model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
@@ -55,7 +55,7 @@ model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
 # the details of that, but you can find the tokenizer parameters in the 
 # [documentation](https://huggingface.co/docs/transformers/v4.28.1/en/model_doc/auto#transformers.AutoTokenizer).
 
-#%%
+
 tokenizer = AutoTokenizer.from_pretrained(model_name, use_fast=True)
 
 sentence = "What time is it, Tom?"
@@ -72,7 +72,7 @@ print(sentence_encoded["input_ids"][0])
 print('\nDECODED SENTENCE:')
 print(sentence_decoded)
 
-#%%
+
 for i, index in enumerate(example_indices):
     dialogue = dataset['test'][index]['dialogue']
     summary = dataset['test'][index]['summary']
@@ -108,7 +108,7 @@ for i, index in enumerate(example_indices):
 # (https://aws.amazon.com/blogs/machine-learning/zero-shot-prompting-for-the-flan-t5-foundation-model-in-amazon-sagemaker-jumpstart/) for a quick description of what zero shot learning is and why it is an important concept to the LLM model.
 # Wrap the dialogue in a descriptive instruction and see how the generated text will change:
 
-#%%
+
 for i, index in enumerate(example_indices):
     dialogue = dataset['test'][index]['dialogue']
     summary = dataset['test'][index]['summary']
@@ -154,7 +154,7 @@ Summary:
 # In the following code, you will use one of the 
 # [pre-built FLAN-T5 prompts](https://github.com/google-research/FLAN/blob/main/flan/v2/templates.py):
 
-#%%
+
 for i, index in enumerate(example_indices):
     dialogue = dataset['test'][index]['dialogue']
     summary = dataset['test'][index]['summary']
@@ -200,7 +200,7 @@ What was going on?
 # full examples, then at the end appends the prompt which you want the model to complete
 # (`example_index_to_summarize`).  You will use the same FLAN-T5 prompt template from section [3.2](#3.2). 
 
-#%%
+
 def make_prompt(example_indices_full, example_index_to_summarize):
     prompt = ''
     for index in example_indices_full:
@@ -231,7 +231,7 @@ What was going on?
         
     return prompt
 
-#%%
+
 example_indices_full = [40]
 example_index_to_summarize = 200
 
@@ -239,7 +239,7 @@ one_shot_prompt = make_prompt(example_indices_full, example_index_to_summarize)
 
 print(one_shot_prompt)
 
-#%%
+
 summary = dataset['test'][example_index_to_summarize]['summary']
 
 inputs = tokenizer(one_shot_prompt, return_tensors='pt')
@@ -259,7 +259,7 @@ print(f'MODEL GENERATION - ONE SHOT:\n{output}')
 ### 4.2 - Few Shot Inference
 
 # Let's explore few shot inference by adding two more full dialogue-summary pairs to your prompt.
-#%%
+
 example_indices_full = [40, 80, 120]
 example_index_to_summarize = 200
 
@@ -269,7 +269,7 @@ print(few_shot_prompt)
 
 
 # Now pass this prompt to perform a few shot inference:
-#%%
+
 summary = dataset['test'][example_index_to_summarize]['summary']
 
 inputs = tokenizer(few_shot_prompt, return_tensors='pt')
@@ -313,14 +313,14 @@ print(f'MODEL GENERATION - FEW SHOT:\n{output}')
 # You can then adjust the outputs changing `temperature` and other parameters (such as `top_k` and `top_p`). 
 # Uncomment the lines in the cell below and rerun the code. Try to analyze the results. You can read some comments below.
 
-#%%
+
 generation_config = GenerationConfig(max_new_tokens=50)
 # generation_config = GenerationConfig(max_new_tokens=10)
 # generation_config = GenerationConfig(max_new_tokens=50, do_sample=True, temperature=0.1)
 # generation_config = GenerationConfig(max_new_tokens=50, do_sample=True, temperature=0.5)
 # generation_config = GenerationConfig(max_new_tokens=50, do_sample=True, temperature=1.0)
 
-#%%
+
 inputs = tokenizer(few_shot_prompt, return_tensors='pt')
 output = tokenizer.decode(
     model.generate(
