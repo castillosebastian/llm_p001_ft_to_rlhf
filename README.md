@@ -7,6 +7,11 @@
    4. Connect to serial port!
    5. Management: 
       1. Automation: 
-         1. intall `instalar_02_v2.sh` from `\cloud`
+         1. intall `instalar_02_v2.sh` from `\cloud`. To follow the installation process enable 'serial port' console by 'Edit' configuration options.
+3. Clone github repo 
+   1. ex. https://github.com/castillosebastian/llm_p001_ft_to_rlhf.git
+   2. connect to github account
 
-To follow the installation process enable 'serial port' console by 'Edit' configuration options.
+
+Resources:
+- VM GCC: https://www.youtube.com/watch?v=ArlISmUMV_A&list=LL&index=1&t=1177s 
