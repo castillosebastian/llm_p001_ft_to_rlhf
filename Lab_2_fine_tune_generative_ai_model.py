@@ -1,13 +1,13 @@
-# %% [markdown]
+
 # # Fine-Tune a Generative AI Model for Dialogue Summarization
 
-# %% [markdown]
+
 # In this notebook, you will fine-tune an existing LLM from Hugging Face for enhanced dialogue summarization. You will use the [FLAN-T5](https://huggingface.co/docs/transformers/model_doc/flan-t5) model, which provides a high quality instruction tuned model and can summarize text out of the box. To improve the inferences, you will explore a full fine-tuning approach and evaluate the results with ROUGE metrics. Then you will perform Parameter Efficient Fine-Tuning (PEFT), evaluate the resulting model and see that the benefits of PEFT outweigh the slightly-lower performance metrics.
 
-# %% [markdown]
+
 # # Table of Contents
 
-# %% [markdown]
+
 # - [ 1 - Set up Kernel, Load Required Dependencies, Dataset and LLM](#1)
 #   - [ 1.1 - Set up Kernel and Required Dependencies](#1.1)
 #   - [ 1.2 - Load Dataset and LLM](#1.2)
@@ -23,10 +23,10 @@
 #   - [ 3.3 - Evaluate the Model Qualitatively (Human Evaluation)](#3.3)
 #   - [ 3.4 - Evaluate the Model Quantitatively (with ROUGE Metric)](#3.4)
 
-# %% [markdown]
+
 # Import the necessary components. Some of them are new for this week, they will be discussed later in the notebook. 
 
-# %%
+#
 from datasets import load_dataset
 from transformers import AutoModelForSeq2SeqLM, AutoTokenizer, GenerationConfig, TrainingArguments, Trainer
 import torch
@@ -35,32 +35,26 @@ import evaluate
 import pandas as pd
 import numpy as np
 
-# %% [markdown]
-# <a name='1.2'></a>
-# ### 1.2 - Load Dataset and LLM
-# 
-# You are going to continue experimenting with the [DialogSum](https://huggingface.co/datasets/knkarthick/dialogsum) Hugging Face dataset. It contains 10,000+ dialogues with the corresponding manually labeled summaries and topics. 
-
-# %%
+#
 huggingface_dataset_name = "knkarthick/dialogsum"
 
 dataset = load_dataset(huggingface_dataset_name)
 
 dataset
 
-# %% [markdown]
+
 # Load the pre-trained [FLAN-T5 model](https://huggingface.co/docs/transformers/model_doc/flan-t5) and its tokenizer directly from HuggingFace. Notice that you will be using the [small version](https://huggingface.co/google/flan-t5-base) of FLAN-T5. Setting `torch_dtype=torch.bfloat16` specifies the memory type to be used by this model.
 
-# %%
+#
 model_name='google/flan-t5-base'
 
 original_model = AutoModelForSeq2SeqLM.from_pretrained(model_name, torch_dtype=torch.bfloat16)
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 
-# %% [markdown]
+
 # It is possible to pull out the number of model parameters and find out how many of them are trainable. The following function can be used to do that, at this stage, you do not need to go into details of it. 
 
-# %%
+#
 def print_number_of_trainable_model_parameters(model):
     trainable_model_params = 0
     all_model_params = 0
@@ -72,13 +66,13 @@ def print_number_of_trainable_model_parameters(model):
 
 print(print_number_of_trainable_model_parameters(original_model))
 
-# %% [markdown]
+
 # <a name='1.3'></a>
 # ### 1.3 - Test the Model with Zero Shot Inferencing
 # 
 # Test the model with the zero shot inferencing. You can see that the model struggles to summarize the dialogue compared to the baseline summary, but it does pull out some important information from the text which indicates the model can be fine-tuned to the task at hand.
 
-# %%
+#
 index = 200
 
 dialogue = dataset['test'][index]['dialogue']
@@ -109,11 +103,11 @@ print(f'BASELINE HUMAN SUMMARY:\n{summary}\n')
 print(dash_line)
 print(f'MODEL GENERATION - ZERO SHOT:\n{output}')
 
-# %% [markdown]
+
 # <a name='2'></a>
 # ## 2 - Perform Full Fine-Tuning
 
-# %% [markdown]
+
 # <a name='2.1'></a>
 # ### 2.1 - Preprocess the Dialog-Summary Dataset
 # 
@@ -136,7 +130,7 @@ print(f'MODEL GENERATION - ZERO SHOT:\n{output}')
 # 
 # Then preprocess the prompt-response dataset into tokens and pull out their `input_ids` (1 per token).
 
-# %%
+#
 def tokenize_function(example):
     start_prompt = 'Summarize the following conversation.\n\n'
     end_prompt = '\n\nSummary: '
@@ -151,16 +145,16 @@ def tokenize_function(example):
 tokenized_datasets = dataset.map(tokenize_function, batched=True)
 tokenized_datasets = tokenized_datasets.remove_columns(['id', 'topic', 'dialogue', 'summary',])
 
-# %% [markdown]
+
 # To save some time in the lab, you will subsample the dataset:
 
-# %%
+#
 tokenized_datasets = tokenized_datasets.filter(lambda example, index: index % 100 == 0, with_indices=True)
 
-# %% [markdown]
+
 # Check the shapes of all three parts of the dataset:
 
-# %%
+#
 print(f"Shapes of the datasets:")
 print(f"Training: {tokenized_datasets['train'].shape}")
 print(f"Validation: {tokenized_datasets['validation'].shape}")
@@ -168,16 +162,16 @@ print(f"Test: {tokenized_datasets['test'].shape}")
 
 print(tokenized_datasets)
 
-# %% [markdown]
+
 # The output dataset is ready for fine-tuning.
 
-# %% [markdown]
+
 # <a name='2.2'></a>
 # ### 2.2 - Fine-Tune the Model with the Preprocessed Dataset
 # 
 # Now utilize the built-in Hugging Face `Trainer` class (see the documentation [here](https://huggingface.co/docs/transformers/main_classes/trainer)). Pass the preprocessed dataset with reference to the original model. Other training parameters are found experimentally and there is no need to go into details about those at the moment.
 
-# %%
+#
 output_dir = f'./dialogue-summary-training-{str(int(time.time()))}'
 
 training_args = TrainingArguments(
@@ -196,42 +190,42 @@ trainer = Trainer(
     eval_dataset=tokenized_datasets['validation']
 )
 
-# %% [markdown]
+
 # Start training process...
 # 
 # <img src="data:image/svg+xml;base64,Cjxzdmcgd2lkdGg9IjgwMCIgaGVpZ2h0PSIxMjUiIHZpZXdCb3g9IjAgMCA4MDAgMTI1IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgogICAgPGRlZnM+CiAgICAgICAgPGxpbmVhckdyYWRpZW50IGlkPSJmYWRlR3JhZGllbnQiIHgxPSIwIiB4Mj0iMSI+CiAgICAgICAgICAgIDxzdG9wIG9mZnNldD0iMCUiIHN0b3AtY29sb3I9IiNGMEYwRjAiLz4KICAgICAgICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjRjBGMEYwIiBzdG9wLW9wYWNpdHk9IjAiLz4KICAgICAgICA8L2xpbmVhckdyYWRpZW50PgogICAgICAgIDxtYXNrIGlkPSJmYWRlTWFzayI+CiAgICAgICAgICAgIDxyZWN0IHg9IjAiIHk9IjAiIHdpZHRoPSI3NTAiIGhlaWdodD0iMTI1IiBmaWxsPSJ3aGl0ZSIvPgogICAgICAgICAgICA8cmVjdCB4PSI3NTAiIHk9IjAiIHdpZHRoPSI1MCIgaGVpZ2h0PSIxMjUiIGZpbGw9InVybCgjZmFkZUdyYWRpZW50KSIvPgogICAgICAgIDwvbWFzaz4KICAgIDwvZGVmcz4KICAgIDxwYXRoIGQ9Ik0zLDUwIEE1MCw1MCAwIDAgMSA1MywzIEw3OTcsMyBMNzk3LDk3IEw5Nyw5NyBMNTAsMTE1IEwzLDk3IFoiIGZpbGw9IiNGMEYwRjAiIHN0cm9rZT0iI0UwRTBFMCIgc3Ryb2tlLXdpZHRoPSIxIiBtYXNrPSJ1cmwoI2ZhZGVNYXNrKSIvPgogICAgPGNpcmNsZSBjeD0iNTAiIGN5PSI1MCIgcj0iMzAiIGZpbGw9IiM1N2M0ZjgiIHN0cm9rZT0iIzU3YzRmOCIgc3Ryb2tlLXdpZHRoPSIxIi8+CiAgICA8Y2lyY2xlIGN4PSI1MCIgY3k9IjUwIiByPSIyNSIgZmlsbD0iI0YwRjBGMCIvPgogICAgPGxpbmUgeDE9IjUwIiB5MT0iNTAiIHgyPSI1MCIgeTI9IjMwIiBzdHJva2U9IiM1N2M0ZjgiIHN0cm9rZS13aWR0aD0iMyIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+CiAgICA8bGluZSB4MT0iNTAiIHkxPSI1MCIgeDI9IjY1IiB5Mj0iNTAiIHN0cm9rZT0iIzU3YzRmOCIgc3Ryb2tlLXdpZHRoPSIzIiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KICAgIDx0ZXh0IHg9IjEwMCIgeT0iMzQiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzMzMzMzMyI+VGhlIG5leHQgY2VsbCBtYXkgdGFrZSBhIGZldyBtaW51dGVzIHRvIHJ1bi4gUGxlYXNlIGJlIHBhdGllbnQuPC90ZXh0PgogICAgPHRleHQgeD0iMTAwIiB5PSI1NiIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBmaWxsPSIjMzMzMzMzIj5Zb3UgY2FuIHNhZmVseSBpZ25vcmUgdGhlIHdhcm5pbmcgbWVzc2FnZXMuPC90ZXh0Pgo8L3N2Zz4K" alt="Time alert open medium"/>
 
-# %%
+#
 trainer.train()
 
-# %% [markdown]
+
 # <img src="data:image/svg+xml;base64,Cjxzdmcgd2lkdGg9IjgwMCIgaGVpZ2h0PSI1MCIgdmlld0JveD0iMCAwIDgwMCA1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICAgIDxkZWZzPgogICAgICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZmFkZUdyYWRpZW50IiB4MT0iMCIgeDI9IjEiPgogICAgICAgICAgICA8c3RvcCBvZmZzZXQ9IjAlIiBzdG9wLWNvbG9yPSIjRjBGMEYwIi8+CiAgICAgICAgICAgIDxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iI0YwRjBGMCIgc3RvcC1vcGFjaXR5PSIwIi8+CiAgICAgICAgPC9saW5lYXJHcmFkaWVudD4KICAgICAgICA8bWFzayBpZD0iZmFkZU1hc2siPgogICAgICAgICAgICA8cmVjdCB4PSIwIiB5PSIwIiB3aWR0aD0iNzUwIiBoZWlnaHQ9IjUwIiBmaWxsPSJ3aGl0ZSIvPgogICAgICAgICAgICA8cmVjdCB4PSI3NTAiIHk9IjAiIHdpZHRoPSI1MCIgaGVpZ2h0PSI1MCIgZmlsbD0idXJsKCNmYWRlR3JhZGllbnQpIi8+CiAgICAgICAgPC9tYXNrPgogICAgPC9kZWZzPgogICAgPHBhdGggZD0iTTI1LDUwIFEwLDUwIDAsMjUgTDUwLDMgTDk3LDI1IEw3OTcsMjUgTDc5Nyw1MCBMMjUsNTAgWiIgZmlsbD0iI0YwRjBGMCIgc3Ryb2tlPSIjRTBFMEUwIiBzdHJva2Utd2lkdGg9IjEiIG1hc2s9InVybCgjZmFkZU1hc2spIi8+Cjwvc3ZnPgo=" alt="Time alert close"/>
 
-# %% [markdown]
+
 # Training a fully fine-tuned version of the model would take a few hours on a GPU. To save time, download a checkpoint of the fully fine-tuned model to use in the rest of this notebook. This fully fine-tuned model will also be referred to as the **instruct model** in this lab.
 
-# %%
+#
 !aws s3 cp --recursive s3://dlai-generative-ai/models/flan-dialogue-summary-checkpoint/ ./flan-dialogue-summary-checkpoint/
 
-# %% [markdown]
+
 # The size of the downloaded instruct model is approximately 1GB.
 
-# %%
+#
 !ls -alh ./flan-dialogue-summary-checkpoint/pytorch_model.bin
 
-# %% [markdown]
+
 # Create an instance of the `AutoModelForSeq2SeqLM` class for the instruct model:
 
-# %%
+#
 instruct_model = AutoModelForSeq2SeqLM.from_pretrained("./flan-dialogue-summary-checkpoint", torch_dtype=torch.bfloat16)
 
-# %% [markdown]
+
 # <a name='2.3'></a>
 # ### 2.3 - Evaluate the Model Qualitatively (Human Evaluation)
 # 
 # As with many GenAI applications, a qualitative approach where you ask yourself the question "Is my model behaving the way it is supposed to?" is usually a good starting point. In the example below (the same one we started this notebook with), you can see how the fine-tuned model is able to create a reasonable summary of the dialogue compared to the original inability to understand what is being asked of the model.
 
-# %%
+#
 index = 200
 dialogue = dataset['test'][index]['dialogue']
 human_baseline_summary = dataset['test'][index]['summary']
@@ -259,19 +253,19 @@ print(f'ORIGINAL MODEL:\n{original_model_text_output}')
 print(dash_line)
 print(f'INSTRUCT MODEL:\n{instruct_model_text_output}')
 
-# %% [markdown]
+
 # <a name='2.4'></a>
 # ### 2.4 - Evaluate the Model Quantitatively (with ROUGE Metric)
 # 
 # The [ROUGE metric](https://en.wikipedia.org/wiki/ROUGE_(metric)) helps quantify the validity of summarizations produced by models. It compares summarizations to a "baseline" summary which is usually created by a human. While not perfect, it does indicate the overall increase in summarization effectiveness that we have accomplished by fine-tuning.
 
-# %%
+#
 rouge = evaluate.load('rouge')
 
-# %% [markdown]
+
 # Generate the outputs for the sample of the test dataset (only 10 dialogues and summaries to save time), and save the results.
 
-# %%
+#
 dialogues = dataset['test'][0:10]['dialogue']
 human_baseline_summaries = dataset['test'][0:10]['summary']
 
@@ -300,10 +294,10 @@ zipped_summaries = list(zip(human_baseline_summaries, original_model_summaries, 
 df = pd.DataFrame(zipped_summaries, columns = ['human_baseline_summaries', 'original_model_summaries', 'instruct_model_summaries'])
 df
 
-# %% [markdown]
+
 # Evaluate the models computing ROUGE metrics. Notice the improvement in the results!
 
-# %%
+#
 original_model_results = rouge.compute(
     predictions=original_model_summaries,
     references=human_baseline_summaries[0:len(original_model_summaries)],
@@ -323,10 +317,10 @@ print(original_model_results)
 print('INSTRUCT MODEL:')
 print(instruct_model_results)
 
-# %% [markdown]
+
 # The file `data/dialogue-summary-training-results.csv` contains a pre-populated list of all model results which you can use to evaluate on a larger section of data. Let's do that for each of the models:
 
-# %%
+#
 results = pd.read_csv("data/dialogue-summary-training-results.csv")
 
 human_baseline_summaries = results['human_baseline_summaries'].values
@@ -352,17 +346,17 @@ print(original_model_results)
 print('INSTRUCT MODEL:')
 print(instruct_model_results)
 
-# %% [markdown]
+
 # The results show substantial improvement in all ROUGE metrics:
 
-# %%
+#
 print("Absolute percentage improvement of INSTRUCT MODEL over ORIGINAL MODEL")
 
 improvement = (np.array(list(instruct_model_results.values())) - np.array(list(original_model_results.values())))
 for key, value in zip(instruct_model_results.keys(), improvement):
     print(f'{key}: {value*100:.2f}%')
 
-# %% [markdown]
+
 # <a name='3'></a>
 # ## 3 - Perform Parameter Efficient Fine-Tuning (PEFT)
 # 
@@ -372,13 +366,13 @@ for key, value in zip(instruct_model_results.keys(), improvement):
 # 
 # That said, at inference time, the LoRA adapter needs to be reunited and combined with its original LLM to serve the inference request.  The benefit, however, is that many LoRA adapters can re-use the original LLM which reduces overall memory requirements when serving multiple tasks and use cases.
 
-# %% [markdown]
+
 # <a name='3.1'></a>
 # ### 3.1 - Setup the PEFT/LoRA model for Fine-Tuning
 # 
 # You need to set up the PEFT/LoRA model for fine-tuning with a new layer/parameter adapter. Using PEFT/LoRA, you are freezing the underlying LLM and only training the adapter. Have a look at the LoRA configuration below. Note the rank (`r`) hyper-parameter, which defines the rank/dimension of the adapter to be trained.
 
-# %%
+#
 from peft import LoraConfig, get_peft_model, TaskType
 
 lora_config = LoraConfig(
@@ -390,21 +384,21 @@ lora_config = LoraConfig(
     task_type=TaskType.SEQ_2_SEQ_LM # FLAN-T5
 )
 
-# %% [markdown]
+
 # Add LoRA adapter layers/parameters to the original LLM to be trained.
 
-# %%
+#
 peft_model = get_peft_model(original_model, 
                             lora_config)
 print(print_number_of_trainable_model_parameters(peft_model))
 
-# %% [markdown]
+
 # <a name='3.2'></a>
 # ### 3.2 - Train PEFT Adapter
 # 
 # Define training arguments and create `Trainer` instance.
 
-# %%
+#
 output_dir = f'./peft-dialogue-summary-training-{str(int(time.time()))}'
 
 peft_training_args = TrainingArguments(
@@ -422,12 +416,12 @@ peft_trainer = Trainer(
     train_dataset=tokenized_datasets["train"],
 )
 
-# %% [markdown]
+
 # Now everything is ready to train the PEFT adapter and save the model.
 # 
 # <img src="data:image/svg+xml;base64,Cjxzdmcgd2lkdGg9IjgwMCIgaGVpZ2h0PSIxMjUiIHZpZXdCb3g9IjAgMCA4MDAgMTI1IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgogICAgPGRlZnM+CiAgICAgICAgPGxpbmVhckdyYWRpZW50IGlkPSJmYWRlR3JhZGllbnQiIHgxPSIwIiB4Mj0iMSI+CiAgICAgICAgICAgIDxzdG9wIG9mZnNldD0iMCUiIHN0b3AtY29sb3I9IiNGMEYwRjAiLz4KICAgICAgICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjRjBGMEYwIiBzdG9wLW9wYWNpdHk9IjAiLz4KICAgICAgICA8L2xpbmVhckdyYWRpZW50PgogICAgICAgIDxtYXNrIGlkPSJmYWRlTWFzayI+CiAgICAgICAgICAgIDxyZWN0IHg9IjAiIHk9IjAiIHdpZHRoPSI3NTAiIGhlaWdodD0iMTI1IiBmaWxsPSJ3aGl0ZSIvPgogICAgICAgICAgICA8cmVjdCB4PSI3NTAiIHk9IjAiIHdpZHRoPSI1MCIgaGVpZ2h0PSIxMjUiIGZpbGw9InVybCgjZmFkZUdyYWRpZW50KSIvPgogICAgICAgIDwvbWFzaz4KICAgIDwvZGVmcz4KICAgIDxwYXRoIGQ9Ik0zLDUwIEE1MCw1MCAwIDAgMSA1MywzIEw3OTcsMyBMNzk3LDk3IEw5Nyw5NyBMNTAsMTE1IEwzLDk3IFoiIGZpbGw9IiNGMEYwRjAiIHN0cm9rZT0iI0UwRTBFMCIgc3Ryb2tlLXdpZHRoPSIxIiBtYXNrPSJ1cmwoI2ZhZGVNYXNrKSIvPgogICAgPGNpcmNsZSBjeD0iNTAiIGN5PSI1MCIgcj0iMzAiIGZpbGw9IiM1N2M0ZjgiIHN0cm9rZT0iIzU3YzRmOCIgc3Ryb2tlLXdpZHRoPSIxIi8+CiAgICA8Y2lyY2xlIGN4PSI1MCIgY3k9IjUwIiByPSIyNSIgZmlsbD0iI0YwRjBGMCIvPgogICAgPGxpbmUgeDE9IjUwIiB5MT0iNTAiIHgyPSI1MCIgeTI9IjMwIiBzdHJva2U9IiM1N2M0ZjgiIHN0cm9rZS13aWR0aD0iMyIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+CiAgICA8bGluZSB4MT0iNTAiIHkxPSI1MCIgeDI9IjY1IiB5Mj0iNTAiIHN0cm9rZT0iIzU3YzRmOCIgc3Ryb2tlLXdpZHRoPSIzIiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KICAgIDx0ZXh0IHg9IjEwMCIgeT0iMzQiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzMzMzMzMyI+VGhlIG5leHQgY2VsbCBtYXkgdGFrZSBhIGZldyBtaW51dGVzIHRvIHJ1bi48L3RleHQ+Cjwvc3ZnPgo=" alt="Time alert open medium"/>
 
-# %%
+#
 peft_trainer.train()
 
 peft_model_path="./peft-dialogue-summary-checkpoint-local"
@@ -435,25 +429,25 @@ peft_model_path="./peft-dialogue-summary-checkpoint-local"
 peft_trainer.model.save_pretrained(peft_model_path)
 tokenizer.save_pretrained(peft_model_path)
 
-# %% [markdown]
+
 # <img src="data:image/svg+xml;base64,Cjxzdmcgd2lkdGg9IjgwMCIgaGVpZ2h0PSI1MCIgdmlld0JveD0iMCAwIDgwMCA1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICAgIDxkZWZzPgogICAgICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZmFkZUdyYWRpZW50IiB4MT0iMCIgeDI9IjEiPgogICAgICAgICAgICA8c3RvcCBvZmZzZXQ9IjAlIiBzdG9wLWNvbG9yPSIjRjBGMEYwIi8+CiAgICAgICAgICAgIDxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iI0YwRjBGMCIgc3RvcC1vcGFjaXR5PSIwIi8+CiAgICAgICAgPC9saW5lYXJHcmFkaWVudD4KICAgICAgICA8bWFzayBpZD0iZmFkZU1hc2siPgogICAgICAgICAgICA8cmVjdCB4PSIwIiB5PSIwIiB3aWR0aD0iNzUwIiBoZWlnaHQ9IjUwIiBmaWxsPSJ3aGl0ZSIvPgogICAgICAgICAgICA8cmVjdCB4PSI3NTAiIHk9IjAiIHdpZHRoPSI1MCIgaGVpZ2h0PSI1MCIgZmlsbD0idXJsKCNmYWRlR3JhZGllbnQpIi8+CiAgICAgICAgPC9tYXNrPgogICAgPC9kZWZzPgogICAgPHBhdGggZD0iTTI1LDUwIFEwLDUwIDAsMjUgTDUwLDMgTDk3LDI1IEw3OTcsMjUgTDc5Nyw1MCBMMjUsNTAgWiIgZmlsbD0iI0YwRjBGMCIgc3Ryb2tlPSIjRTBFMEUwIiBzdHJva2Utd2lkdGg9IjEiIG1hc2s9InVybCgjZmFkZU1hc2spIi8+Cjwvc3ZnPgo=" alt="Time alert close"/>
 
-# %% [markdown]
+
 # That training was performed on a subset of data. To load a fully trained PEFT model, read a checkpoint of a PEFT model from S3.
 
-# %%
+#
 !aws s3 cp --recursive s3://dlai-generative-ai/models/peft-dialogue-summary-checkpoint/ ./peft-dialogue-summary-checkpoint-from-s3/ 
 
-# %% [markdown]
+
 # Check that the size of this model is much less than the original LLM:
 
-# %%
+#
 !ls -al ./peft-dialogue-summary-checkpoint-from-s3/adapter_model.bin
 
-# %% [markdown]
+
 # Prepare this model by adding an adapter to the original FLAN-T5 model. You are setting `is_trainable=False` because the plan is only to perform inference with this PEFT model. If you were preparing the model for further training, you would set `is_trainable=True`.
 
-# %%
+#
 from peft import PeftModel, PeftConfig
 
 peft_model_base = AutoModelForSeq2SeqLM.from_pretrained("google/flan-t5-base", torch_dtype=torch.bfloat16)
@@ -464,19 +458,19 @@ peft_model = PeftModel.from_pretrained(peft_model_base,
                                        torch_dtype=torch.bfloat16,
                                        is_trainable=False)
 
-# %% [markdown]
+
 # The number of trainable parameters will be `0` due to `is_trainable=False` setting:
 
-# %%
+#
 print(print_number_of_trainable_model_parameters(peft_model))
 
-# %% [markdown]
+
 # <a name='3.3'></a>
 # ### 3.3 - Evaluate the Model Qualitatively (Human Evaluation)
 # 
 # Make inferences for the same example as in sections [1.3](#1.3) and [2.3](#2.3), with the original model, fully fine-tuned and PEFT model.
 
-# %%
+#
 index = 200
 dialogue = dataset['test'][index]['dialogue']
 baseline_human_summary = dataset['test'][index]['summary']
@@ -508,12 +502,12 @@ print(f'INSTRUCT MODEL:\n{instruct_model_text_output}')
 print(dash_line)
 print(f'PEFT MODEL: {peft_model_text_output}')
 
-# %% [markdown]
+
 # <a name='3.4'></a>
 # ### 3.4 - Evaluate the Model Quantitatively (with ROUGE Metric)
 # Perform inferences for the sample of the test dataset (only 10 dialogues and summaries to save time). 
 
-# %%
+#
 dialogues = dataset['test'][0:10]['dialogue']
 human_baseline_summaries = dataset['test'][0:10]['summary']
 
@@ -551,10 +545,10 @@ zipped_summaries = list(zip(human_baseline_summaries, original_model_summaries, 
 df = pd.DataFrame(zipped_summaries, columns = ['human_baseline_summaries', 'original_model_summaries', 'instruct_model_summaries', 'peft_model_summaries'])
 df
 
-# %%
+#
 Compute ROUGE score for this subset of the data. 
 
-# %%
+#
 rouge = evaluate.load('rouge')
 
 original_model_results = rouge.compute(
@@ -585,13 +579,13 @@ print(instruct_model_results)
 print('PEFT MODEL:')
 print(peft_model_results)
 
-# %% [markdown]
+
 # Notice, that PEFT model results are not too bad, while the training process was much easier!
 
-# %% [markdown]
+
 # You already computed ROUGE score on the full dataset, after loading the results from the `data/dialogue-summary-training-results.csv` file. Load the values for the PEFT model now and check its performance compared to other models.
 
-# %%
+#
 human_baseline_summaries = results['human_baseline_summaries'].values
 original_model_summaries = results['original_model_summaries'].values
 instruct_model_summaries = results['instruct_model_summaries'].values
@@ -625,32 +619,32 @@ print(instruct_model_results)
 print('PEFT MODEL:')
 print(peft_model_results)
 
-# %% [markdown]
+
 # The results show less of an improvement over full fine-tuning, but the benefits of PEFT typically outweigh the slightly-lower performance metrics.
 # 
 # Calculate the improvement of PEFT over the original model:
 
-# %%
+#
 print("Absolute percentage improvement of PEFT MODEL over ORIGINAL MODEL")
 
 improvement = (np.array(list(peft_model_results.values())) - np.array(list(original_model_results.values())))
 for key, value in zip(peft_model_results.keys(), improvement):
     print(f'{key}: {value*100:.2f}%')
 
-# %% [markdown]
+
 # Now calculate the improvement of PEFT over a full fine-tuned model:
 
-# %%
+#
 print("Absolute percentage improvement of PEFT MODEL over INSTRUCT MODEL")
 
 improvement = (np.array(list(peft_model_results.values())) - np.array(list(instruct_model_results.values())))
 for key, value in zip(peft_model_results.keys(), improvement):
     print(f'{key}: {value*100:.2f}%')
 
-# %% [markdown]
+
 # Here you see a small percentage decrease in the ROUGE metrics vs. full fine-tuned. However, the training requires much less computing and memory resources (often just a single GPU).
 
-# %%
+#
 
 
 
