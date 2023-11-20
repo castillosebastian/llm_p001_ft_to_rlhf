@@ -1,3 +1,5 @@
+# Create, fine tune and align LLM for dialog summary
+## By cscastillo
 
 1. Enable 'Compute Engine' in Google Cloud Console.
 2. Create an VM intance with
@@ -11,7 +13,11 @@
 3. Clone github repo 
    1. ex. https://github.com/castillosebastian/llm_p001_ft_to_rlhf.git
    2. connect to github account
-
+4. Start to run scripts
+   
+TODO:
+- Add model checkpoints in lab 2
 
 Resources:
+- GenAI Deeplearning Course https://www.deeplearning.ai/courses/generative-ai-with-llms/
 - VM GCC: https://www.youtube.com/watch?v=ArlISmUMV_A&list=LL&index=1&t=1177s 
