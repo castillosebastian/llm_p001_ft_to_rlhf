@@ -214,6 +214,8 @@ trainer.train()
 !ls -alh ./flan-dialogue-summary-checkpoint/pytorch_model.bin
 
 
+# TODO: https://huggingface.co/google/flan-t5-xxl/tree/main
+
 # Create an instance of the `AutoModelForSeq2SeqLM` class for the instruct model:
 
 #
